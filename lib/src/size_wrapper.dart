@@ -5,10 +5,10 @@ import 'package:flutter/widgets.dart';
 typedef OnWidgetSizeChange = Function(Size newSize);
 
 class WidgetSizeRenderObject extends RenderProxyBox {
+  WidgetSizeRenderObject(this.onSizeChange);
+
   final OnWidgetSizeChange onSizeChange;
   Size? currentSize;
-
-  WidgetSizeRenderObject(this.onSizeChange);
 
   @override
   void performLayout() {
@@ -32,13 +32,13 @@ class WidgetSizeRenderObject extends RenderProxyBox {
 }
 
 class WidgetSizeWrapper extends SingleChildRenderObjectWidget {
-  final OnWidgetSizeChange onSizeChange;
-
   const WidgetSizeWrapper({
     Key? key,
     required this.onSizeChange,
     required Widget child,
   }) : super(key: key, child: child);
+
+  final OnWidgetSizeChange onSizeChange;
 
   @override
   RenderObject createRenderObject(BuildContext context) {

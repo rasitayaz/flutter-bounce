@@ -10,14 +10,30 @@ import 'size_wrapper.dart';
 /// It emphasizes the bounce effect without compromising the animation duration. By applying this delay,
 /// the transition time will allow the bounce-back animation to be slightly visible before transition is done.
 /// This makes for a better and more put-together overall UX feel.
-const _defaultTapDelay = Duration(milliseconds: 150);
+const _defaultTapDelay = Duration(milliseconds: 100);
 
 /// The default duration for the scale and rotation animations, when enabled.
-const _defaultDuration = Duration(milliseconds: 400);
+const _defaultDuration = Duration(milliseconds: 200);
 
-const _defaultLongPressDuration = Duration(milliseconds: 1000);
+const _defaultLongPressDuration = kLongPressTimeout;
 
 class Bounce extends StatefulWidget {
+  const Bounce({
+    Key? key,
+    required this.child,
+    this.onTap,
+    this.onLongPress,
+    this.behavior = HitTestBehavior.deferToChild,
+    this.duration = _defaultDuration,
+    this.tapDelay = _defaultTapDelay,
+    this.longPressDuration = _defaultLongPressDuration,
+    this.scale = true,
+    this.scaleFactor = 0.95,
+    this.tilt = true,
+    this.tiltAngle = pi / 10,
+    this.filterQuality = FilterQuality.high,
+  }) : super(key: key);
+
   /// The callback fired when the user's finger is lifted from the widget,
   /// providing informations about local and global position.
   final Function()? onTap;
@@ -57,22 +73,6 @@ class Bounce extends StatefulWidget {
   /// Specifying a null [filterQuality] may result in poor performances and aliased edges.
   final FilterQuality? filterQuality;
 
-  const Bounce(
-      {Key? key,
-      required this.child,
-      this.onTap,
-      this.onLongPress,
-      this.behavior = HitTestBehavior.deferToChild,
-      this.duration = _defaultDuration,
-      this.tapDelay = _defaultTapDelay,
-      this.longPressDuration = _defaultLongPressDuration,
-      this.scale = true,
-      this.scaleFactor = 0.95,
-      this.tilt = true,
-      this.tiltAngle = pi / 10,
-      this.filterQuality = FilterQuality.high})
-      : super(key: key);
-
   @override
   BounceState createState() => BounceState();
 }
@@ -95,7 +95,8 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
 
   @override
   void initState() {
-    _controller = AnimationController(vsync: this, duration: widget.duration, value: 0);
+    _controller =
+        AnimationController(vsync: this, duration: widget.duration, value: 0);
     super.initState();
   }
 
@@ -107,19 +108,20 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-      behavior: HitTestBehavior.deferToChild,
-      onTapDown: _onTapDown,
-      onPanUpdate: _onPointerMove,
-      onTapCancel: _onTapCancel,
-      onTapUp: _onPointerUp,
-      dragStartBehavior: DragStartBehavior.down,
-      child: AnimatedBuilder(
+        behavior: HitTestBehavior.deferToChild,
+        onTapDown: _onTapDown,
+        onTapCancel: _onTapCancel,
+        onTapUp: _onPointerUp,
+        dragStartBehavior: DragStartBehavior.down,
+        child: AnimatedBuilder(
           animation: _controller,
           builder: (ctx, child) {
             final transform = Matrix4.identity()..setEntry(3, 2, 0.002);
 
             if (widget.scale) {
-              transform.scale(lerpDouble(1, widget.scaleFactor, _controller.value));
+              transform.scale(
+                lerpDouble(1, widget.scaleFactor, _controller.value),
+              );
             }
 
             if (widget.tilt && _lastTapLocation != null && lastSize != null) {
@@ -136,17 +138,24 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
             }
 
             return Transform(
-                transformHitTests: true,
-                transform: transform,
-                origin: Offset((lastSize?.width ?? 0) / 2, (lastSize?.height ?? 0) / 2),
-                filterQuality: widget.filterQuality,
-                child: child);
+              transformHitTests: true,
+              transform: transform,
+              origin: Offset(
+                (lastSize?.width ?? 0) / 2,
+                (lastSize?.height ?? 0) / 2,
+              ),
+              filterQuality: widget.filterQuality,
+              child: child,
+            );
           },
           child: WidgetSizeWrapper(
-              onSizeChange: (newSize) {
-                lastSize = newSize;
-              },
-              child: widget.child)));
+            onSizeChange: (newSize) {
+              lastSize = newSize;
+            },
+            child: widget.child,
+          ),
+        ),
+      );
 
   void _onTapDown(TapDownDetails details) {
     isCancelled = false;
@@ -174,14 +183,6 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
     _animateBack();
   }
 
-  void _onPointerMove(DragUpdateDetails details) {
-    isLongPressing = false;
-    if (isCancelled) return;
-    if (details.delta.dx.abs() > 1 || details.delta.dy.abs() > 1) {
-      _onTapCancel();
-    }
-  }
-
   void _onPointerUp(TapUpDetails details) {
     _animateBack();
     isLongPressing = false;
@@ -192,7 +193,8 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
     }
 
     if (_lastTapTime != null) {
-      final msSinceLastTap = DateTime.now().difference(_lastTapTime!).inMilliseconds;
+      final msSinceLastTap =
+          DateTime.now().difference(_lastTapTime!).inMilliseconds;
 
       /// Debounce for twice the minimum tap delay
       if (msSinceLastTap < widget.tapDelay.inMilliseconds * 2) return;
@@ -201,7 +203,9 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
     _lastTapTime = DateTime.now();
 
     if (_lastTapTime != null) {
-      final msSinceTapDown = DateTime.now().difference(_lastTapDownTime ?? DateTime.now()).inMilliseconds;
+      final msSinceTapDown = DateTime.now()
+          .difference(_lastTapDownTime ?? DateTime.now())
+          .inMilliseconds;
 
       if (msSinceTapDown > widget.tapDelay.inMilliseconds) {
         /// If the minimum delay is ellapsed, immediately trigger the action.
@@ -209,7 +213,8 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
       } else {
         /// Otherwise, wait for the difference between the actually ellapsed time and the minimum delay before
         /// triggering the animation.
-        Future.delayed(widget.tapDelay - _lastTapTime!.difference(DateTime.now()), () {
+        Future.delayed(
+            widget.tapDelay - _lastTapTime!.difference(DateTime.now()), () {
           onTap?.call();
         });
       }
