@@ -31,7 +31,7 @@ class Bounce extends StatefulWidget {
     this.scaleFactor = 0.95,
     this.tilt = true,
     this.tiltAngle = pi / 10,
-    this.filterQuality = FilterQuality.high,
+    this.filterQuality,
   }) : super(key: key);
 
   /// The callback fired when the user's finger is lifted from the widget,
@@ -74,7 +74,7 @@ class Bounce extends StatefulWidget {
   final FilterQuality? filterQuality;
 
   @override
-  BounceState createState() => BounceState();
+  State<Bounce> createState() => BounceState();
 }
 
 class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
@@ -95,9 +95,12 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
 
   @override
   void initState() {
-    _controller =
-        AnimationController(vsync: this, duration: widget.duration, value: 0);
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+      value: 0,
+    );
   }
 
   @override
@@ -107,55 +110,56 @@ class BounceState extends State<Bounce> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.deferToChild,
-        onTapDown: _onTapDown,
-        onTapCancel: _onTapCancel,
-        onTapUp: _onPointerUp,
-        dragStartBehavior: DragStartBehavior.down,
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (ctx, child) {
-            final transform = Matrix4.identity()..setEntry(3, 2, 0.002);
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.deferToChild,
+      onTapDown: _onTapDown,
+      onTapCancel: _onTapCancel,
+      onTapUp: _onPointerUp,
+      dragStartBehavior: DragStartBehavior.down,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          final transform = Matrix4.identity()..setEntry(3, 2, 0.002);
 
-            if (widget.scale) {
-              transform.scale(
-                lerpDouble(1, widget.scaleFactor, _controller.value),
-              );
-            }
-
-            if (widget.tilt && _lastTapLocation != null && lastSize != null) {
-              double x, y, xAngle, yAngle;
-
-              x = _lastTapLocation!.dx / lastSize!.width;
-              y = _lastTapLocation!.dy / lastSize!.height;
-
-              xAngle = (x - 0.5) * (-widget.tiltAngle) * _controller.value;
-              yAngle = (y - 0.5) * (widget.tiltAngle) * _controller.value;
-
-              transform.rotateX(yAngle);
-              transform.rotateY(xAngle);
-            }
-
-            return Transform(
-              transformHitTests: true,
-              transform: transform,
-              origin: Offset(
-                (lastSize?.width ?? 0) / 2,
-                (lastSize?.height ?? 0) / 2,
-              ),
-              filterQuality: widget.filterQuality,
-              child: child,
+          if (widget.scale) {
+            transform.scale(
+              lerpDouble(1, widget.scaleFactor, _controller.value),
             );
+          }
+
+          if (widget.tilt && _lastTapLocation != null && lastSize != null) {
+            double x, y, xAngle, yAngle;
+
+            x = _lastTapLocation!.dx / lastSize!.width;
+            y = _lastTapLocation!.dy / lastSize!.height;
+
+            xAngle = (x - 0.5) * (-widget.tiltAngle) * _controller.value;
+            yAngle = (y - 0.5) * (widget.tiltAngle) * _controller.value;
+
+            transform.rotateX(yAngle);
+            transform.rotateY(xAngle);
+          }
+
+          return Transform(
+            filterQuality: widget.filterQuality,
+            transform: transform,
+            origin: Offset(
+              (lastSize?.width ?? 0) / 2,
+              (lastSize?.height ?? 0) / 2,
+            ),
+            child: child,
+          );
+        },
+        child: WidgetSizeWrapper(
+          onSizeChange: (newSize) {
+            lastSize = newSize;
           },
-          child: WidgetSizeWrapper(
-            onSizeChange: (newSize) {
-              lastSize = newSize;
-            },
-            child: widget.child,
-          ),
+          child: widget.child,
         ),
-      );
+      ),
+    );
+  }
 
   void _onTapDown(TapDownDetails details) {
     isCancelled = false;
